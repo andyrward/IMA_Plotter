@@ -1,13 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "ima-plotter"
 version = "0.1.0"
-description = "Add your description here"
+description = "Plotting utility for IMA magnetic measurement data from Excel files"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.3",
+    "openpyxl>=3.1.0",
     "pandas>=3.0.1",
     "plotly>=6.6.0",
     "scipy>=1.17.1",
+]
+
+[project.optional-dependencies]
+notebook = [
+    "ipykernel>=6.0",
+    "jupyter>=1.0",
+]
+dev = [
+    "pytest>=8.0",
 ]
