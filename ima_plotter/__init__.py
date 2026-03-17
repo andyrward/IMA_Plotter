@@ -1,6 +1,11 @@
 """IMA Plotter – utilities for loading and analysing IMA magnetic measurement data."""
 
-__version__ = "0.1.0"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("ima-plotter")
+except PackageNotFoundError:  # package not installed (e.g. during development)
+    __version__ = "unknown"
 
 from .loader import load_excel_files
 from .transformer import subtract_baseline

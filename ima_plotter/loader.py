@@ -2,6 +2,7 @@
 
 import glob
 import os
+import warnings
 
 import pandas as pd
 
@@ -83,7 +84,10 @@ def load_excel_files(
         try:
             df = pd.read_excel(path, sheet_name=sheet_name)
         except Exception as exc:
-            print(f"Warning: could not read '{path}': {exc}")
+            warnings.warn(
+                f"Could not read '{path}': {exc}",
+                stacklevel=2,
+            )
             continue
 
         meta = parse_filename(path)

@@ -77,9 +77,13 @@ def plot_magnetic_vs_time(
     # Choose y columns
     # ------------------------------------------------------------------
     if use_baseline_subtracted:
-        if "delta_avg_v2abs_magnetic" not in data.columns:
+        required = ["delta_avg_v2abs_magnetic"]
+        if show_error_bars:
+            required.append("delta_std_v2abs_magnetic")
+        missing = [c for c in required if c not in data.columns]
+        if missing:
             raise ValueError(
-                "Baseline-subtracted columns not found. "
+                f"Baseline-subtracted column(s) not found: {missing}. "
                 "Run subtract_baseline() first."
             )
         y_col = "delta_avg_v2abs_magnetic"
@@ -99,6 +103,11 @@ def plot_magnetic_vs_time(
         facet_cols = [facet_by]
     else:
         facet_cols = list(facet_by)
+
+    if len(facet_cols) > 2:
+        raise ValueError(
+            f"facet_by supports at most 2 columns, got {len(facet_cols)}: {facet_cols}"
+        )
 
     # ------------------------------------------------------------------
     # Build subplot grid
