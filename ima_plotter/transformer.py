@@ -10,14 +10,18 @@ def subtract_baseline(
     df: pd.DataFrame,
     baseline_group: str = "Cal0",
     by: list[str] | None = None,
+    time_col: str = "time_index",
 ) -> pd.DataFrame:
-    """Subtract a baseline group from all other groups in each sub-group.
+    """Subtract a baseline group from all other groups using time-matched subtraction.
 
     For each combination of columns in *by* (default: ``["id",
-    "frequency"]``), the baseline row (where ``group == baseline_group``)
-    is identified and its ``avg_v2abs_magnetic`` value is subtracted from
-    every other row in that sub-group.  Combined uncertainty is propagated
-    as:
+    "frequency"]``) **and** each value of *time_col* (default:
+    ``"time_index"``), the baseline row (where ``group == baseline_group``)
+    at that specific time point is identified and its
+    ``avg_v2abs_magnetic`` value is subtracted from every other row at
+    the same time point.  If no baseline row exists for a particular time
+    point the delta columns are left as ``NaN`` for that time point.
+    Combined uncertainty is propagated as:
 
     .. math::
 
@@ -38,6 +42,9 @@ def subtract_baseline(
     by:
         List of column names that define the sub-groups within which the
         baseline is applied.  Defaults to ``["id", "frequency"]``.
+    time_col:
+        Column name that identifies the time point for matching.
+        Defaults to ``"time_index"``.
 
     Returns
     -------
@@ -51,21 +58,26 @@ def subtract_baseline(
     result["delta_avg_v2abs_magnetic"] = np.nan
     result["delta_std_v2abs_magnetic"] = np.nan
 
-    for keys, group_df in result.groupby(by, sort=False):
+    groupby_cols = by + [time_col]
+
+    for keys, group_df in result.groupby(groupby_cols, sort=False):
         baseline_rows = group_df[group_df["group"] == baseline_group]
 
         if baseline_rows.empty:
-            label = dict(zip(by, keys if isinstance(keys, tuple) else (keys,)))
-            warnings.warn(
-                f"Baseline group '{baseline_group}' not found for {label}. "
-                "Skipping this sub-group.",
-                stacklevel=2,
-            )
+            # No baseline at this time point – leave delta as NaN
             continue
 
-        # Use the mean of baseline rows in case there are multiple
-        baseline_avg = baseline_rows["avg_v2abs_magnetic"].mean()
-        baseline_std = baseline_rows["std_v2abs_magnetic"].mean()
+        if len(baseline_rows) > 1:
+            label = dict(zip(groupby_cols, keys if isinstance(keys, tuple) else (keys,)))
+            warnings.warn(
+                f"Multiple baseline rows found for {label}. "
+                "Using the first one.",
+                stacklevel=2,
+            )
+
+        # Use the baseline value at this specific time point
+        baseline_avg = baseline_rows["avg_v2abs_magnetic"].iloc[0]
+        baseline_std = baseline_rows["std_v2abs_magnetic"].iloc[0]
 
         mask = group_df.index
         result.loc[mask, "delta_avg_v2abs_magnetic"] = (
