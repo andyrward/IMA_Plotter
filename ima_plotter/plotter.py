@@ -14,6 +14,7 @@ def plot_magnetic_vs_time(
     facet_by: Union[str, list[Optional[str]], None] = None,
     filter_frequency: Union[float, list[float], None] = None,
     filter_id: Union[str, list[str], None] = None,
+    filter_group: Union[str, list[str], None] = None,
     show_error_bars: bool = True,
     use_baseline_subtracted: bool = False,
     color_by: str = "group",
@@ -58,6 +59,9 @@ def plot_magnetic_vs_time(
         ``None`` means no filtering.
     filter_id:
         Keep only rows where ``id`` is in this value / list of values.
+        ``None`` means no filtering.
+    filter_group:
+        Keep only rows where ``group`` is in this value / list of values.
         ``None`` means no filtering.
     show_error_bars:
         Whether to draw error bars.
@@ -143,6 +147,10 @@ def plot_magnetic_vs_time(
     if filter_id is not None:
         ids = [filter_id] if not isinstance(filter_id, list) else filter_id
         data = data[data["id"].isin(ids)]
+
+    if filter_group is not None:
+        groups = [filter_group] if not isinstance(filter_group, list) else filter_group
+        data = data[data["group"].isin(groups)]
 
     if data.empty:
         raise ValueError("No data remains after applying the requested filters.")

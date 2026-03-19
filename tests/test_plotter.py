@@ -377,3 +377,28 @@ class TestYMultiplier:
         for t1, t2 in zip(fig_default.data, fig_explicit.data):
             for y1, y2 in zip(t1.y, t2.y):
                 assert abs(y1 - y2) < 1e-9
+
+
+class TestFilterGroup:
+    """Tests for the filter_group parameter."""
+
+    def test_filter_group_single_string(self):
+        """filter_group with a single string keeps only rows for that group."""
+        df = _make_multi_group_df()
+        fig = plot_magnetic_vs_time(df, filter_group="Cal1")
+        trace_names = [trace.name for trace in fig.data]
+        assert trace_names == ["Cal1"]
+
+    def test_filter_group_list(self):
+        """filter_group with a list keeps only rows for those groups."""
+        df = _make_multi_group_df()
+        fig = plot_magnetic_vs_time(df, filter_group=["Cal1", "Cal2", "Cal3"])
+        trace_names = sorted(trace.name for trace in fig.data)
+        assert trace_names == ["Cal1", "Cal2", "Cal3"]
+
+    def test_filter_group_none_keeps_all(self):
+        """filter_group=None should keep all groups."""
+        df = _make_multi_group_df()
+        fig = plot_magnetic_vs_time(df, filter_group=None)
+        trace_names = sorted(trace.name for trace in fig.data)
+        assert trace_names == ["Cal0", "Cal1", "Cal2", "Cal3"]
