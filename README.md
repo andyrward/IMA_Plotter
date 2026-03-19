@@ -33,6 +33,7 @@ fig = plot_magnetic_vs_time(
     df_sub,
     facet_by="id",
     filter_frequency=2,
+    filter_group=["Cal1", "Cal2", "Cal3"],  # exclude Cal0 (baseline)
     use_baseline_subtracted=True,
     show_error_bars=True,
 )
