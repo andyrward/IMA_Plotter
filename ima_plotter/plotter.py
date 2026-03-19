@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 
 def plot_magnetic_vs_time(
     df: pd.DataFrame,
-    facet_by: Union[str, list[str], None] = None,
+    facet_by: Union[str, list[Optional[str]], None] = None,
     filter_frequency: Union[float, list[float], None] = None,
     filter_id: Union[str, list[str], None] = None,
     show_error_bars: bool = True,
@@ -30,8 +30,13 @@ def plot_magnetic_vs_time(
         Column name(s) to use for faceting (subplots).  Accepts:
 
         * ``None`` – single plot, no faceting
-        * ``"id"`` or ``"frequency"`` – one subplot per unique value
+        * ``"id"`` or ``"frequency"`` – one subplot per unique value,
+          arranged horizontally (equivalent to ``[None, "id"]``)
         * ``["id", "frequency"]`` – grid of subplots (rows × columns)
+        * ``["id", None]`` – vertical layout: one subplot per ID, stacked
+          in rows (subplots share the x-axis)
+        * ``[None, "frequency"]`` – horizontal layout: one subplot per
+          frequency, arranged in columns (subplots share the y-axis)
     filter_frequency:
         Keep only rows where ``frequency`` is in this value / list of values.
         ``None`` means no filtering.
@@ -98,7 +103,7 @@ def plot_magnetic_vs_time(
     # Normalise facet_by to a list
     # ------------------------------------------------------------------
     if facet_by is None:
-        facet_cols: list[str] = []
+        facet_cols: list[Optional[str]] = []
     elif isinstance(facet_by, str):
         facet_cols = [facet_by]
     else:
@@ -108,6 +113,20 @@ def plot_magnetic_vs_time(
         raise ValueError(
             f"facet_by supports at most 2 columns, got {len(facet_cols)}: {facet_cols}"
         )
+
+    # Determine layout direction when None is used as a positional sentinel.
+    # [col, None]  → vertical (rows=n, cols=1)
+    # [None, col]  → horizontal (rows=1, cols=n)  – same as a bare string
+    # [None, None] → error
+    vertical_single = False  # True when [col, None]
+    if len(facet_cols) == 2 and (facet_cols[0] is None or facet_cols[1] is None):
+        if facet_cols[0] is None and facet_cols[1] is None:
+            raise ValueError(
+                "facet_by=[None, None] is invalid – at least one element must be a column name."
+            )
+        vertical_single = facet_cols[1] is None
+        # Collapse to a single real column name
+        facet_cols = [c for c in facet_cols if c is not None]
 
     # ------------------------------------------------------------------
     # Build subplot grid
@@ -135,28 +154,54 @@ def plot_magnetic_vs_time(
         facet_values = sorted(data[facet_col].unique())
         n_plots = len(facet_values)
 
-        fig = make_subplots(
-            rows=1,
-            cols=n_plots,
-            shared_yaxes=True,
-            subplot_titles=[f"{facet_col}={v}" for v in facet_values],
-        )
-        seen_legends: set[str] = set()
-        for col_idx, fv in enumerate(facet_values, start=1):
-            subset = data[data[facet_col] == fv]
-            show_legend = col_idx == 1
-            _add_traces(
-                fig,
-                subset,
-                row=1,
-                col=col_idx,
-                y_col=y_col,
-                err_col=err_col,
-                show_error_bars=show_error_bars,
-                color_by=color_by,
-                show_legend=show_legend,
-                seen_legends=seen_legends,
+        if vertical_single:
+            # Vertical layout: one row per value, single column
+            fig = make_subplots(
+                rows=n_plots,
+                cols=1,
+                shared_xaxes=True,
+                subplot_titles=[f"{facet_col}={v}" for v in facet_values],
             )
+            seen_legends: set[str] = set()
+            for row_idx, fv in enumerate(facet_values, start=1):
+                subset = data[data[facet_col] == fv]
+                show_legend = row_idx == 1
+                _add_traces(
+                    fig,
+                    subset,
+                    row=row_idx,
+                    col=1,
+                    y_col=y_col,
+                    err_col=err_col,
+                    show_error_bars=show_error_bars,
+                    color_by=color_by,
+                    show_legend=show_legend,
+                    seen_legends=seen_legends,
+                )
+        else:
+            # Horizontal layout: single row, one column per value (default)
+            fig = make_subplots(
+                rows=1,
+                cols=n_plots,
+                shared_yaxes=True,
+                subplot_titles=[f"{facet_col}={v}" for v in facet_values],
+            )
+            seen_legends: set[str] = set()
+            for col_idx, fv in enumerate(facet_values, start=1):
+                subset = data[data[facet_col] == fv]
+                show_legend = col_idx == 1
+                _add_traces(
+                    fig,
+                    subset,
+                    row=1,
+                    col=col_idx,
+                    y_col=y_col,
+                    err_col=err_col,
+                    show_error_bars=show_error_bars,
+                    color_by=color_by,
+                    show_legend=show_legend,
+                    seen_legends=seen_legends,
+                )
         fig.update_layout(
             xaxis_title="Average Time (s)",
             yaxis_title=y_label,
