@@ -13,8 +13,14 @@ A Python utility for loading, transforming, and interactively plotting IMA magne
 
 ```bash
 pip install -e .                        # core dependencies
-pip install -e ".[notebook]"            # + Jupyter support
+pip install -e ".[notebook]"            # + Jupyter + ipywidgets support
 pip install -e ".[dev]"                 # + pytest
+```
+
+With [uv](https://github.com/astral-sh/uv):
+
+```bash
+uv pip install -e ".[notebook]"
 ```
 
 ## Quick Start
@@ -77,6 +83,31 @@ Open `notebooks/demo.ipynb` for a fully worked example covering:
 ```bash
 jupyter notebook notebooks/demo.ipynb
 ```
+
+## Interactive Notebook
+
+Open `notebooks/interactive_plotter.ipynb` for a GUI-based interface using
+[ipywidgets](https://ipywidgets.readthedocs.io/).  Install notebook extras
+first:
+
+```bash
+pip install -e ".[notebook]"
+# or with uv
+uv pip install -e ".[notebook]"
+```
+
+Then launch the notebook:
+
+```bash
+jupyter notebook notebooks/interactive_plotter.ipynb
+```
+
+The notebook lets you:
+- Browse to a data directory and load `.xlsx` files with one click
+- Filter by frequency, ID, and group using multi-select lists
+- Configure faceting, colour mapping, error bars, and styling via dropdowns
+- Apply baseline subtraction interactively
+- Generate an interactive Plotly figure without writing any code
 
 ## Running Tests
 
