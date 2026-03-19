@@ -11,11 +11,15 @@ from .loader import load_excel_files
 from .transformer import subtract_baseline
 from .plotter import plot_magnetic_vs_time
 from .utils import parse_filename
+from .widgets import DataManager, PlotWidgets, create_interactive_plotter
 
 __all__ = [
     "load_excel_files",
     "subtract_baseline",
     "plot_magnetic_vs_time",
     "parse_filename",
+    "DataManager",
+    "PlotWidgets",
+    "create_interactive_plotter",
     "__version__",
 ]
