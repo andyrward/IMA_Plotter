@@ -130,6 +130,8 @@ class DataManager:
 
 _FACET_ROW_COL_OPTIONS = [None, "id", "frequency"]
 
+_MAX_FACET_UNIQUE_VALUES = 20
+
 _MARKER_SIZE_OPTIONS = [None, 5, 7, 9, 11, 13, 15, 20]
 
 _MARKER_SYMBOL_OPTIONS = [
@@ -211,6 +213,8 @@ class PlotWidgets:
         self.line_width_by: widgets.Dropdown | None = None
 
         self.y_multiplier: widgets.FloatText | None = None
+        self.fig_width: widgets.IntText | None = None
+        self.fig_height: widgets.IntText | None = None
 
         # Action buttons
         self.btn_load: widgets.Button | None = None
@@ -285,6 +289,8 @@ class PlotWidgets:
 
         # --- Advanced ---
         params["y_multiplier"] = self.y_multiplier.value
+        params["fig_width"] = self.fig_width.value
+        params["fig_height"] = self.fig_height.value
 
         return params
 
@@ -306,6 +312,8 @@ class PlotWidgets:
         self.line_width_by.value = None
 
         self.y_multiplier.value = 1.0
+        self.fig_width.value = 1000
+        self.fig_height.value = 600
 
         self.filter_frequency.value = []
         self.filter_id.value = []
@@ -337,9 +345,36 @@ class PlotWidgets:
             w.options = col_opts
             w.value = None
 
+        # Update facet dropdowns with dynamic column options
+        facet_opts = self._get_facet_columns()
+        self.facet_row.options = facet_opts
+        self.facet_row.value = None
+        self.facet_col.options = facet_opts
+        self.facet_col.value = None
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _get_facet_columns(self) -> list:
+        """Return suitable columns for faceting from the loaded DataFrame.
+
+        Always includes ``None`` as the first entry (no faceting).  Columns
+        with between 2 and 20 unique values are considered good candidates;
+        purely numeric measurement columns are excluded.
+        """
+        if self._dm.data is None:
+            return list(_FACET_ROW_COL_OPTIONS)  # fallback defaults
+
+        _SKIP = {"time_index", "avg_time", "magnetic", "magnetic_err"}
+        facet_candidates: list = [None]
+        for col in self._dm.data.columns:
+            if col in _SKIP:
+                continue
+            n_unique = self._dm.data[col].nunique()
+            if 1 < n_unique <= _MAX_FACET_UNIQUE_VALUES:
+                facet_candidates.append(col)
+        return facet_candidates
 
     def _build_widgets(self) -> None:
         """Instantiate all individual widgets."""
@@ -365,8 +400,9 @@ class PlotWidgets:
         self.filter_group = _make_select_multiple("Group:", [])
 
         # --- Display options ---
-        self.facet_row = _make_dropdown("Facet Row:", _FACET_ROW_COL_OPTIONS, None)
-        self.facet_col = _make_dropdown("Facet Column:", _FACET_ROW_COL_OPTIONS, None)
+        facet_opts = self._get_facet_columns()
+        self.facet_row = _make_dropdown("Facet Row:", facet_opts, None)
+        self.facet_col = _make_dropdown("Facet Column:", facet_opts, None)
         self.color_by = _make_dropdown("Color By:", ["group"], "group")
         self.show_error_bars = widgets.Checkbox(
             description="Show Error Bars",
@@ -399,6 +435,20 @@ class PlotWidgets:
             description="Y Multiplier:",
             value=1.0,
             step=0.1,
+            style=_DESCRIPTION_STYLE,
+            layout=_WIDGET_LAYOUT,
+        )
+        self.fig_width = widgets.IntText(
+            description="Figure Width:",
+            value=1000,
+            step=50,
+            style=_DESCRIPTION_STYLE,
+            layout=_WIDGET_LAYOUT,
+        )
+        self.fig_height = widgets.IntText(
+            description="Figure Height:",
+            value=600,
+            step=50,
             style=_DESCRIPTION_STYLE,
             layout=_WIDGET_LAYOUT,
         )
@@ -446,6 +496,9 @@ class PlotWidgets:
                 self.color_by,
                 self.show_error_bars,
                 self.use_baseline_subtracted,
+                widgets.HTML("<b>Figure Size</b>"),
+                self.fig_width,
+                self.fig_height,
             ],
             layout=widgets.Layout(padding="10px"),
         )
@@ -605,7 +658,10 @@ def create_interactive_plotter() -> tuple[DataManager, PlotWidgets, widgets.Outp
 
             print("⏳ Generating plot …")
             try:
+                fig_width = params.pop("fig_width", 1000)
+                fig_height = params.pop("fig_height", 600)
                 fig = plot_magnetic_vs_time(df, **params)
+                fig.update_layout(width=fig_width, height=fig_height)
                 fig.show()
             except (ValueError, KeyError, TypeError) as exc:
                 print(f"❌ Error generating plot: {exc}")
