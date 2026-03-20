@@ -128,14 +128,7 @@ class DataManager:
 # PlotWidgets
 # ---------------------------------------------------------------------------
 
-_FACET_OPTIONS = [
-    "None (single plot)",
-    "id",
-    "frequency",
-    "id × frequency (grid)",
-    "id (vertical)",
-    "frequency (horizontal)",
-]
+_FACET_ROW_COL_OPTIONS = [None, "id", "frequency"]
 
 _MARKER_SIZE_OPTIONS = [None, 5, 7, 9, 11, 13, 15, 20]
 
@@ -202,7 +195,8 @@ class PlotWidgets:
         self.filter_id: widgets.SelectMultiple | None = None
         self.filter_group: widgets.SelectMultiple | None = None
 
-        self.facet_by: widgets.Dropdown | None = None
+        self.facet_row: widgets.Dropdown | None = None
+        self.facet_col: widgets.Dropdown | None = None
         self.color_by: widgets.Dropdown | None = None
         self.show_error_bars: widgets.Checkbox | None = None
         self.use_baseline_subtracted: widgets.Checkbox | None = None
@@ -250,17 +244,17 @@ class PlotWidgets:
         params: dict = {}
 
         # --- Facet by ---
-        facet_raw = self.facet_by.value
-        if facet_raw == "None (single plot)" or facet_raw is None:
+        facet_row = self.facet_row.value
+        facet_col = self.facet_col.value
+
+        if facet_row is None and facet_col is None:
             params["facet_by"] = None
-        elif facet_raw == "id × frequency (grid)":
-            params["facet_by"] = ["id", "frequency"]
-        elif facet_raw == "id (vertical)":
-            params["facet_by"] = ["id", None]
-        elif facet_raw == "frequency (horizontal)":
-            params["facet_by"] = [None, "frequency"]
+        elif facet_row is not None and facet_col is None:
+            params["facet_by"] = [facet_row, None]
+        elif facet_row is None and facet_col is not None:
+            params["facet_by"] = [None, facet_col]
         else:
-            params["facet_by"] = facet_raw
+            params["facet_by"] = [facet_row, facet_col]
 
         # --- Filters ---
         freq_sel = list(self.filter_frequency.value)
@@ -296,7 +290,8 @@ class PlotWidgets:
 
     def reset_to_defaults(self) -> None:
         """Reset all widgets to their default values."""
-        self.facet_by.value = "None (single plot)"
+        self.facet_row.value = None
+        self.facet_col.value = None
         self.color_by.value = "group"
         self.show_error_bars.value = True
         self.use_baseline_subtracted.value = False
@@ -370,7 +365,8 @@ class PlotWidgets:
         self.filter_group = _make_select_multiple("Group:", [])
 
         # --- Display options ---
-        self.facet_by = _make_dropdown("Facet By:", _FACET_OPTIONS, "None (single plot)")
+        self.facet_row = _make_dropdown("Facet Row:", _FACET_ROW_COL_OPTIONS, None)
+        self.facet_col = _make_dropdown("Facet Column:", _FACET_ROW_COL_OPTIONS, None)
         self.color_by = _make_dropdown("Color By:", ["group"], "group")
         self.show_error_bars = widgets.Checkbox(
             description="Show Error Bars",
@@ -445,7 +441,8 @@ class PlotWidgets:
         # ----- Tab 2: Display Options -----
         tab_display = widgets.VBox(
             [
-                self.facet_by,
+                self.facet_row,
+                self.facet_col,
                 self.color_by,
                 self.show_error_bars,
                 self.use_baseline_subtracted,
