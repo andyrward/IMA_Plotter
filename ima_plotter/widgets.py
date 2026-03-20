@@ -8,8 +8,11 @@ Provides:
 
 from __future__ import annotations
 
+import os
+
 import ipywidgets as widgets
 from IPython.display import display
+from ipyfilechooser import FileChooser
 
 from .loader import load_excel_files
 from .plotter import plot_magnetic_vs_time
@@ -221,8 +224,8 @@ class PlotWidgets:
         self.btn_baseline: widgets.Button | None = None
         self.btn_reset: widgets.Button | None = None
 
-        # Directory input
-        self.dir_input: widgets.Text | None = None
+        # Directory chooser
+        self.directory_chooser: FileChooser | None = None
 
         self.create_widgets()
 
@@ -346,11 +349,13 @@ class PlotWidgets:
     def _build_widgets(self) -> None:
         """Instantiate all individual widgets."""
         # --- Data loader ---
-        self.dir_input = widgets.Text(
-            description="Directory:",
-            placeholder="e.g. sample_data/",
-            style=_DESCRIPTION_STYLE,
-            layout=widgets.Layout(width="400px"),
+        self.directory_chooser = FileChooser(
+            path=os.getcwd(),
+            select_default=True,
+            show_only_dirs=True,
+            title="<b>Select Data Directory</b>",
+            show_hidden=False,
+            layout=widgets.Layout(width="600px"),
         )
         self.btn_load = widgets.Button(
             description="Load Data",
@@ -486,10 +491,16 @@ class PlotWidgets:
         tab.set_title(2, "Styling")
         tab.set_title(3, "Advanced")
 
-        # ----- Data loader row -----
-        loader_row = widgets.HBox(
-            [self.dir_input, self.btn_load],
-            layout=widgets.Layout(padding="6px 0px"),
+        # ----- Data loader section -----
+        loader_section = widgets.VBox(
+            [
+                widgets.HTML("<h3>📁 Data Loader</h3>"),
+                self.directory_chooser,
+                widgets.HBox(
+                    [self.btn_load],
+                    layout=widgets.Layout(padding="6px 0px"),
+                ),
+            ]
         )
 
         # ----- Action buttons row -----
@@ -500,8 +511,7 @@ class PlotWidgets:
 
         self.layout = widgets.VBox(
             [
-                widgets.HTML("<h3>📁 Data Loader</h3>"),
-                loader_row,
+                loader_section,
                 widgets.HTML("<h3>🎛️ Plot Controls</h3>"),
                 tab,
                 btn_row,
@@ -542,11 +552,14 @@ def create_interactive_plotter() -> tuple[DataManager, PlotWidgets, widgets.Outp
     # ------------------------------------------------------------------
 
     def _on_load(_btn) -> None:
-        directory = plot_widgets.dir_input.value.strip()
+        directory = plot_widgets.directory_chooser.selected_path
         with output:
             output.clear_output(wait=True)
             if not directory:
-                print("⚠️  Please enter a data directory path.")
+                print("⚠️  Please select a data directory using the file browser.")
+                return
+            if not os.path.isdir(directory):
+                print(f"❌ Selected path is not a valid directory: '{directory}'")
                 return
             print(f"⏳ Loading data from '{directory}' …")
             try:
